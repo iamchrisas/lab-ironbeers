@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const expressHbs = require('express-handlebars');
+const { engine } = require('express-handlebars');
 const PunkAPIWrapper = require('punkapi-javascript-wrapper');
 
 const app = express();
@@ -9,19 +9,18 @@ const punkAPI = new PunkAPIWrapper();
 // Setup Handlebars
 app.engine(
   'hbs',
-  expressHbs({
+  engine({
+    extname: '.hbs',
     defaultLayout: 'layout',
-    extname: '.hbs'
+    layoutsDir: path.join(__dirname, 'views'),
+    partialsDir: path.join(__dirname, 'views/partials') // No need for manual partials registration
   })
 );
+
 app.set('view engine', 'hbs');
 app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Register the location for handlebars partials here:
-hbs.registerPartials(path.join(__dirname, 'views/partials'));
-
 // Add the route handlers here:
 
 // Home route
@@ -42,10 +41,15 @@ app.get('/random-beer', (req, res) => {
   punkAPI
     .getRandom()
     .then(responseFromAPI => {
-      const [beer] = responseFromAPI; // Since it's an array with one object, destructure it to get the object.
-      res.render('random-beer', { beer });
+      //getRandom returns an array, we destructure it to get the first item.
+      const [randomBeer] = responseFromAPI;
+      //pass the random beer object to the template.
+      res.render('random-beer', { beer: randomBeer });
     })
-    .catch(error => console.log(error));
+    .catch(error => {
+      console.log(error);
+      res.status(500).send('Error occurred while retrieving a random beer');
+    });
 });
 
 app.listen(3000, () => console.log('🏃‍ on port 3000'));
